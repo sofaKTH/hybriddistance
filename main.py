@@ -11,7 +11,7 @@ import rospy
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 import actionlib
 from actionlib_msgs.msg import *
-from geometry_msgs.msg import Pose, Point, Quaternion
+from geometry_msgs.msg import Pose, Point, Quaternion, PoseStamped
 
 #---------------------------------------------------------------
 #GOTO
@@ -71,24 +71,30 @@ A=ha.make_manual_TAhd(dead)
 #list of lists, each inner list contains x, y coord 
 #number of lists equals number of states in env 
 #update coord after mapping!
-WP=[[0,0],[1,0], [2,0], [0,1], [1,1], [2,1],[0,2],[1,2],[2,2]]
+WP=[[3.2,4.0],[3.01,3.08], [2.4,4.92], [2.05,2.08], [2.07,3.15], [1.94,4.11],[1.02,2.03],[0.953,2.98],[1.03,4.57]]
 
 #make a WTS
 lab=np.zeros((9, 3))
 k=1
+count=1
 for st in range(9):
 	x=(st+k)%3
 	lab[st, x]=1
-	if k==1:
+	if k==1 and count==3:
 		k=0
-	elif k==0:
+	elif k==0 and count==6:
 		k=2
+	count=count+1
 init=2
 init_dir='U'
 TS=wt.make_WTS(9,3,2,lab, init, init_dir)
 
+print TS.label[16]
 #make a product
 P=p.makeProduct(A,TS)
+for q2 in range(len(P.states)):
+	if P.trans[P.init,q2]!=float("inf"):
+		print P.trans[P.init,q2], P.init,'-->',  q2
 
 #initial graphsearch 
 c=0.5
@@ -100,11 +106,15 @@ string, path, finalTime, finalDC, finalDD, finalHD=gs.findPath(P,c)
 if finalHD!=float("inf"):
 	#path found
 	#convert path to path_WTS
-	path_WTS=[], path_env=[]
+	print path
+	path_WTS=[]
+	path_env=[]
 	for q in path:
 		path_WTS.append(P.states_combos[q,1]) #here WTS states-> env and direction
+	print path_WTS
 	for pi in path_WTS:
-		path_env.append(int(math.floor(pi/4.0))) #env
+		path_env.append(TS.state_combos[pi, 0]) #env
+	print path_env[0]
 	print string, '\n The suggested path is: ', path_env, '\n The resulting distances are: \n dH: ',finalHD, '    dc: ', finalDC, '    dd: ', finalDD 
 else:
 	print string
@@ -126,15 +136,18 @@ while input!='OK' and input!='stop':
 			c=c-inc
 			string, path, finalTime, finalDC, finalDD, finalHD=gs.findPath(P,c)
 	#feedback to terminal
-	if finalHD!=float("inf"):
+	if finalHD!=float("inf") and (c<=1 and c>=0):
 		#path found
 		#convert path to path_WTS
-		path_WTS=[], path_env=[]
+		path_WTS=[] 
+		path_env=[]
 		for q in path:
 			path_WTS.append(P.states_combos[q,1]) #here WTS states-> env and direction
 		for pi in path_WTS:
 			path_env.append(int(math.floor(pi/4.0))) #env
 		print string, '\n The suggested path is: ', path_env, '\n The resulting distances are: \n dH: ',finalHD, '    dc: ', finalDC, '    dd: ', finalDD 
+	elif c>1 or c<0:
+		print 'No path that matches your wish could be found.\n'
 	else:
 		print string
 	#ask for input while it doesn't match one of the given 4
@@ -146,13 +159,16 @@ while input!='OK' and input!='stop':
 #send bot
 
 #ok or stop was given as input
-if input=='ok':
+if input=='OK':
 	#send waypoints to turtlebot
 	rospy.init_node('nav_test', anonymous=False)
 	navigator = GoToPose()
+	pub=rospy.Publisher('move_base_simple/goal', PoseStamped, queue_size=10)
 	timeStart=rospy.get_time()
 	for pi in path_env:
-		x=WP[pi,0], y=WP[pi,1]
+		pi=int(pi)
+		x=WP[pi][0]
+		y=WP[pi][1]
 		position = {'x': x, 'y' : y}
 		quaternion = {'r1' : 0.000, 'r2' : 0.000, 'r3' : 0.000, 'r4' : 1.000}
 		rospy.loginfo("Go to (%s, %s) pose", position['x'], position['y'])

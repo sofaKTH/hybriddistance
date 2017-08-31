@@ -54,14 +54,13 @@ def findPath(product, c):
 				for x in X:
 					if Ix[q2]==x:
 						currTime=time[q1]+trans[q1,q2]
-						print Xv
 						if currTime>=Xv[x-1]:
 							#time is violated
 							violation=True
 				if violation==False:
 					#time is ok, check if a better path has been found
-					currDC=c*(Ih[1,q1]+Ih[1,q2])
-					currDD=(1-c)*(Ih[2,q1]+Ih[2,q2])
+					currDC=c*(Ih[q1,1]+Ih[q2,1])
+					currDD=(1-c)*(Ih[q1,2]+Ih[q2,2])
 					currHD=hd[q1]+currDC+currDD
 					if currHD< hd[q2]: #if better: update and add to Spool
 						hd[q2]=currHD
@@ -82,7 +81,7 @@ def findPath(product, c):
 		finalHD=float("inf")
 		return 'No path found', path, finalTime, finalDC, finalDD, finalHD
 	else:
-		path=q1
+		path=[q1]
 		finalTime=time[q1]
 		finalDC=dc[q1]
 		finalDD=dd[q1]

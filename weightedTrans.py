@@ -12,6 +12,7 @@ class WTS(object):
 	AP=range(1,apnumbers+1)
 	label=np.array
 	init=0
+	state_combos=np.matrix
 
 
 def make_WTS(size, width, apnumbers, labels, init, init_dir):
@@ -20,6 +21,14 @@ def make_WTS(size, width, apnumbers, labels, init, init_dir):
 	T=WTS()
 	T.size=size
 	T.apnumbers=apnumbers
+	state_combos=np.zeros((size*4, 2))
+	i=0
+	for q in range(size):
+		for d in range(4):
+			state_combos[i,0]=q
+			state_combos[i,1]=d
+			i=i+1
+	T.state_combos=state_combos
 	T.states=range(size*4)
 	#T.init=init
 	if init_dir=='L':
@@ -30,7 +39,7 @@ def make_WTS(size, width, apnumbers, labels, init, init_dir):
 		k=1
 	else:
 		k=0
-	T.init=(init-1)*4+k
+	T.init=(init)*4+k
 	
 	#these values should be updated according to the turtlebot
 	passTime=0.01
@@ -40,31 +49,28 @@ def make_WTS(size, width, apnumbers, labels, init, init_dir):
 	T.weights=np.zeros((size*4,size*4))
 	for row in range(size*4):
 		for col in range(size*4):
-			if col==row: #self trans not allowed (to simplify graphsearch)
-				T.trans[row,col]=0
-				T.weights[row,col]=passTime
-			elif row%width!=0 and col-row==4: # trans to right
+			if state_combos[row,0]%width!=width-1 and state_combos[col,0]-state_combos[row,0]==1: # trans to right
 				T.trans[row,col]=1
 				T.weights[row,col]=forwardTime
-			elif row%width!=1 and row-col==4: #trans to left
+			elif state_combos[row,0]%width!=0 and state_combos[col,0]-state_combos[row,0]==-1: #trans to left
 				T.trans[row,col]=1
 				T.weights[row,col]=forwardTime
-			elif col-row==width*4:#trans up
+			elif state_combos[col,0]- state_combos[row,0]==width:#trans up
 				T.trans[row,col]=1
 				T.weights[row,col]=forwardTime
-			elif row-col==width*4: #trans down
+			elif state_combos[row,0]-state_combos[col,0]==width: #trans down
 				T.trans[row,col]=1
 				T.weights[row,col]=forwardTime
-			elif row%4==0 and (col-row==2 or col-row==3): #turning from up
+			elif state_combos[row,1]==0 and (col-row==2 or col-row==3): #turning from up
 				T.trans[row,col]=1
 				T.weights[row,col]=turningTime
-			elif row%4==1 and (col-row==1 or col-row==2): #turning from down
+			elif state_combos[row,1]==1 and (col-row==1 or col-row==2): #turning from down
 				T.trans[row,col]=1
 				T.weights[row,col]=turningTime
-			elif row%4==2 and (col-row==-1 or col-row==-2): #turning from right
+			elif state_combos[row,1]==2 and (col-row==-1 or col-row==-2): #turning from right
 				T.trans[row,col]=1
 				T.weights[row,col]=turningTime
-			elif row%4==3 and (col-row==-2 or col-row==-3): #turning from left
+			elif state_combos[row,1]==3 and (col-row==-2 or col-row==-3): #turning from left
 				T.trans[row,col]=1
 				T.weights[row,col]=turningTime
 			else: 					#no trans

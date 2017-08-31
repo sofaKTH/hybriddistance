@@ -43,6 +43,10 @@ def makeProduct(A, T):
 						trans[q1,q2]=T.weights[sta1,sta2]
 					else:
 						trans[q1,q2]=float("inf")
+			else:
+				trans[q1,q2]=float("inf")
+			if sta1==8 and sta2==16:
+				print trans[q1,q2], q1, q2
 	P.trans=trans
 	# final, Ix, Ih, init
 	final=[]
