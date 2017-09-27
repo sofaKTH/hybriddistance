@@ -67,6 +67,7 @@ class GoToPose():
 dead=10 #deadline
 A=ha.make_manual_TAhd(dead)
 
+
 # waypoints
 #list of lists, each inner list contains x, y coord 
 #number of lists equals number of states in env 
@@ -89,12 +90,11 @@ init=2
 init_dir='U'
 TS=wt.make_WTS(9,3,2,lab, init, init_dir)
 
-print TS.label[16]
 #make a product
 P=p.makeProduct(A,TS)
-for q2 in range(len(P.states)):
-	if P.trans[P.init,q2]!=float("inf"):
-		print P.trans[P.init,q2], P.init,'-->',  q2
+#for q2 in range(len(P.states)):
+#	if P.trans[P.init,q2]!=float("inf"):
+#		print P.trans[P.init,q2], P.init,'-->',  P.states_combos[q2,:]
 
 #initial graphsearch 
 c=0.5
@@ -118,72 +118,74 @@ if finalHD!=float("inf"):
 	print string, '\n The suggested path is: ', path_env, '\n The resulting distances are: \n dH: ',finalHD, '    dc: ', finalDC, '    dd: ', finalDD 
 else:
 	print string
-#ask for input while it doesn't match one of the given 
-input=raw_input("\n Indicate if you approve the suggestion or if you want to resynthesize or abort as:\n OK - I am happy run the bot!, stop - The distances are too big, abort!,\n c+ - I wish to find a path which better meets deadlines, c- - I wish to find a path which performs better w.r.t. the non-temporally bounded tasks\n\n")
-feedback=['OK', 'stop', 'c+', 'c-']
-while input not in feedback:
-	input=raw_input("\n You inserted an unapproved feedback. Please use OK, stop, c+ or c-\n")
 
-while input!='OK' and input!='stop':
-	#feedback was c+ or c-
-	oldPath=path
-	if input=='c+':
-		while path==oldPath and c<=1:
-			c=c+inc
-			string, path, finalTime, finalDC, finalDD, finalHD=gs.findPath(P,c)
-	elif input=='c-':
-		while path==oldPath and c>=0:
-			c=c-inc
-			string, path, finalTime, finalDC, finalDD, finalHD=gs.findPath(P,c)
-	#feedback to terminal
-	if finalHD!=float("inf") and (c<=1 and c>=0):
-		#path found
-		#convert path to path_WTS
-		path_WTS=[] 
-		path_env=[]
-		for q in path:
-			path_WTS.append(P.states_combos[q,1]) #here WTS states-> env and direction
-		for pi in path_WTS:
-			path_env.append(int(math.floor(pi/4.0))) #env
-		print string, '\n The suggested path is: ', path_env, '\n The resulting distances are: \n dH: ',finalHD, '    dc: ', finalDC, '    dd: ', finalDD 
-	elif c>1 or c<0:
-		print 'No path that matches your wish could be found.\n'
-	else:
-		print string
-	#ask for input while it doesn't match one of the given 4
+if finalHD!=float("inf"):
+	#ask for input while it doesn't match one of the given 
 	input=raw_input("\n Indicate if you approve the suggestion or if you want to resynthesize or abort as:\n OK - I am happy run the bot!, stop - The distances are too big, abort!,\n c+ - I wish to find a path which better meets deadlines, c- - I wish to find a path which performs better w.r.t. the non-temporally bounded tasks\n\n")
 	feedback=['OK', 'stop', 'c+', 'c-']
 	while input not in feedback:
 		input=raw_input("\n You inserted an unapproved feedback. Please use OK, stop, c+ or c-\n")
-#---------------------------------------------------------------
-#send bot
 
-#ok or stop was given as input
-if input=='OK':
-	#send waypoints to turtlebot
-	rospy.init_node('nav_test', anonymous=False)
-	navigator = GoToPose()
-	pub=rospy.Publisher('move_base_simple/goal', PoseStamped, queue_size=10)
-	timeStart=rospy.get_time()
-	for pi in path_env:
-		pi=int(pi)
-		x=WP[pi][0]
-		y=WP[pi][1]
-		position = {'x': x, 'y' : y}
-		quaternion = {'r1' : 0.000, 'r2' : 0.000, 'r3' : 0.000, 'r4' : 1.000}
-		rospy.loginfo("Go to (%s, %s) pose", position['x'], position['y'])
-		succ = navigator.goto(position, quaternion)
-		if succ==False:
-			#something went wrong
-			print 'An error occurred and the bot failed to reach waypoint: ', pi 
-			break
+	while input!='OK' and input!='stop':
+		#feedback was c+ or c-
+		oldPath=path
+		if input=='c+':
+			while path==oldPath and c<=1:
+				c=c+inc
+				string, path, finalTime, finalDC, finalDD, finalHD=gs.findPath(P,c)
+		elif input=='c-':
+			while path==oldPath and c>=0:
+				c=c-inc
+				string, path, finalTime, finalDC, finalDD, finalHD=gs.findPath(P,c)
+		#feedback to terminal
+		if finalHD!=float("inf") and (c<=1 and c>=0):
+			#path found
+			#convert path to path_WTS
+			path_WTS=[] 
+			path_env=[]
+			for q in path:
+				path_WTS.append(P.states_combos[q,1]) #here WTS states-> env and direction
+			for pi in path_WTS:
+				path_env.append(int(math.floor(pi/4.0))) #env
+			print string, '\n The suggested path is: ', path_env, '\n The resulting distances are: \n dH: ',finalHD, '    dc: ', finalDC, '    dd: ', finalDD 
+		elif c>1 or c<0:
+			print 'No path that matches your wish could be found.\n'
 		else:
-			newTime=rospy.get_time()
-			passedTime=newTime-timeStart
-			#reached waypoint - continue
-			print 'Bot reached: ', pi, ' at time', passedTime
-	if succ==True:
-		print 'Task completed! \n ----------------------------\n'
-else:
-	#inform terminal that it is aborted
-	print 'You decided to abort the synthesis, no commands will be sent to the bot.\n ---------------------------------------------\n'
+			print string
+		#ask for input while it doesn't match one of the given 4
+		input=raw_input("\n Indicate if you approve the suggestion or if you want to resynthesize or abort as:\n OK - I am happy run the bot!, stop - The distances are too big, abort!,\n c+ - I wish to find a path which better meets deadlines, c- - I wish to find a path which performs better w.r.t. the non-temporally bounded tasks\n\n")
+		feedback=['OK', 'stop', 'c+', 'c-']
+		while input not in feedback:
+			input=raw_input("\n You inserted an unapproved feedback. Please use OK, stop, c+ or c-\n")
+	#---------------------------------------------------------------
+	#send bot
+
+	#ok or stop was given as input
+	if input=='OK':
+		#send waypoints to turtlebot
+		rospy.init_node('nav_test', anonymous=False)
+		navigator = GoToPose()
+		pub=rospy.Publisher('move_base_simple/goal', PoseStamped, queue_size=10)
+		timeStart=rospy.get_time()
+		for pi in path_env:
+			pi=int(pi)
+			x=WP[pi][0]
+			y=WP[pi][1]
+			position = {'x': x, 'y' : y}
+			quaternion = {'r1' : 0.000, 'r2' : 0.000, 'r3' : 0.000, 'r4' : 1.000}
+			rospy.loginfo("Go to (%s, %s) pose", position['x'], position['y'])
+			succ = navigator.goto(position, quaternion)
+			if succ==False:
+				#something went wrong
+				print 'An error occurred and the bot failed to reach waypoint: ', pi 
+				break
+			else:
+				newTime=rospy.get_time()
+				passedTime=newTime-timeStart
+				#reached waypoint - continue
+				print 'Bot reached: ', pi, ' at time', passedTime
+		if succ==True:
+			print 'Task completed! \n ----------------------------\n'
+	else:
+		#inform terminal that it is aborted
+		print 'You decided to abort the synthesis, no commands will be sent to the bot.\n ---------------------------------------------\n'

@@ -38,15 +38,15 @@ def makeProduct(A, T):
 			loc1=states_combos[q1, 2]
 			loc2=states_combos[q2, 2]
 			if T.trans[sta1,sta2]==1: #if the transition exists in WTS
+				done=False
 				for ind in range(len(A.X)+1):
 					if A.E[loc1, T.label[sta2], ind]==loc2: #if the label of the next location matches the act on the edge
 						trans[q1,q2]=T.weights[sta1,sta2]
-					else:
-						trans[q1,q2]=float("inf")
+						done=True
+				if done==False:
+					trans[q1,q2]=float("inf")
 			else:
 				trans[q1,q2]=float("inf")
-			if sta1==8 and sta2==16:
-				print trans[q1,q2], q1, q2
 	P.trans=trans
 	# final, Ix, Ih, init
 	final=[]
