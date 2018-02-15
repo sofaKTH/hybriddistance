@@ -8,7 +8,7 @@ import graphSearch as gs
 
 #ROS
 import rospy
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionGoal
 import actionlib
 from actionlib_msgs.msg import *
 from geometry_msgs.msg import Pose, Point, Quaternion, PoseStamped
@@ -18,26 +18,26 @@ from geometry_msgs.msg import Pose, Point, Quaternion, PoseStamped
 class GoToPose():
     def __init__(self):
     	self.goal_sent = False
+    	rospy.on_shutdown(self.shutdown)
+    	self.move_base = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+    	rospy.loginfo("Wait for the action server to come up")
+    	self.move_base.wait_for_server(rospy.Duration(5))
 
-	# What to do if shut down (e.g. Ctrl-C or failure)
-	rospy.on_shutdown(self.shutdown)
-	
-	# Tell the action client that we want to spin a thread by default
-	self.move_base = actionlib.SimpleActionClient("move_base", MoveBaseAction)
-	rospy.loginfo("Wait for the action server to come up")
-
-	# Allow up to 5 seconds for the action server to come up
-	self.move_base.wait_for_server(rospy.Duration(5))
-
-    def goto(self, pos, quat):
+    def goto(self, pos, quat,ID):
 
         # Send a goal
-        self.goal_sent = True
-        goal = MoveBaseGoal()
-        goal.target_pose.header.frame_id = 'map'
-        goal.target_pose.header.stamp = rospy.Time.now()
-        goal.target_pose.pose = Pose(Point(pos['x'], pos['y'], 0.000),
-                                     Quaternion(quat['r1'], quat['r2'], quat['r3'], quat['r4']))
+        goal_sent = True
+        goal=MoveBaseGoal()
+        goal.target_pose.header.frame_id='/map'
+        goal.target_pose.header.stamp=rospy.Time.now()
+        goal.target_pose.pose.position.x=pos['x']
+        goal.target_pose.pose.position.y=pos['y']
+        goal.target_pose.pose.position.z=0.0
+        goal.target_pose.pose.orientation.x=quat['r1']
+        goal.target_pose.pose.orientation.y=quat['r2']
+        goal.target_pose.pose.orientation.z=quat['r3']
+        goal.target_pose.pose.orientation.w=quat['r4']
+
         # Start moving
         self.move_base.send_goal(goal)
         # Allow TurtleBot up to 60 seconds to complete task
@@ -174,7 +174,7 @@ if finalHD!=float("inf"):
 			position = {'x': x, 'y' : y}
 			quaternion = {'r1' : 0.000, 'r2' : 0.000, 'r3' : 0.000, 'r4' : 1.000}
 			rospy.loginfo("Go to (%s, %s) pose", position['x'], position['y'])
-			succ = navigator.goto(position, quaternion)
+			succ = navigator.goto(position, quaternion, pi)
 			if succ==False:
 				#something went wrong
 				print 'An error occurred and the bot failed to reach waypoint: ', pi 
